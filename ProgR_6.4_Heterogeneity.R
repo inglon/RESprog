@@ -5,6 +5,7 @@
 # Date:  30/08/2013
 # R version: R 3.0.0
 # Details: Our own absolute CNs and heterogeneity
+# Simplified code to run more samples
 ################################################################
 ################################################################
 
@@ -94,7 +95,7 @@ info$sample.name = format(info$sample.name, nsmall = 4, trim = T)
 #obj = loadSample(i, info = info)
 
 ###Read/create data (specify i)
-i = 1
+i = 2
 obj = list(i = i, d = file.path(getwd(), 'HET', info$sample.name[i]),
               info = info)
 obj$h = ifelse(obj$i %in% c(1:3, 6, 10, 22, 28, 35, 42, 46, 48), 1, 2)
@@ -136,10 +137,15 @@ n = 7 #Sample 56
 linearize(obj, 'a1r', output = FALSE, logis = TRUE, asymporig = TRUE, plot = T)
 linearize(obj, 'a2r', output = FALSE, logis = TRUE, asymporig = TRUE, plot = T)
 
-obj$mat$a1rl = linearize(obj, 'a1r', output = TRUE, logis = TRUE)
+obj$mat$a1rl = linearize(obj, 'a1r', output = TRUE, none = TRUE)
+obj$linfunc1 = 'none'
+obj$mat$a1rl = linearize(obj, 'a1r', output = TRUE, logis = TRUE, none = FALSE)
 obj$linfunc1 = 'logis'
+
 obj$mat$a2rl = linearize(obj, 'a2r', output = TRUE, logis = TRUE)
 obj$linfunc2 = 'logis'
+obj$mat$a2rl = linearize(obj, 'a2r', output = TRUE, asymporig = TRUE)
+obj$linfunc2 = 'asymporig'
 
 plotLin(obj)
 obj = setCNs(obj, linearize = FALSE)
@@ -152,7 +158,7 @@ obj = setMultiplicity(obj)
 
 obj = subclonalMutations(obj)
 obj = subclonalCNdist(obj, cut = 3) #Choose cut
-obj = ITH(obj, cn.cut = 5.5, cn.cut0 = -1)
+obj = ITH(obj, cn.cut = 3.5, cn.cut0 = -.5)
 plotCNmutsGrid(obj)
 plotCNmutsGenome(obj)
 plotCNmutsChrom(obj)

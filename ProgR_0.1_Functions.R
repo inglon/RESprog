@@ -19,6 +19,7 @@ loadSample = function(i = NULL, info = NULL){
 
 readCBS = function(obj, printfolder = NULL){
   library(PSCBS)
+  library(aroma.affymetrix)
   d = file.path(getwd(), 'AROMA', 'reports', 'SNP_segmentation', 'CBSfitsWithNormals')
   da = loadObject(paste(d, '/fit', obj$i, '.RData', sep = ''))
   mat = da$output
@@ -30,19 +31,21 @@ readCBS = function(obj, printfolder = NULL){
   mat$length = mat$End - mat$Start
   mat = subset(mat, !is.na(length) & Chromosome<23 & !is.na(a2) & !is.na(a1))
   mat$W = mat$length/sum(mat$length)
+  mat$tot = pmax(mat$a1,0) + mat$a2
+  mat$imba = 2*(mat$a2/(mat$tot)-.5)
   obj$matCBS = mat
   
   
   #Figure
-  x = pmax(mat$a1,0) + mat$a2
-  y = 2*(mat$a2/(x)-.5)
+  x = mat$tot
+  y = mat$imba
   xlim = c(quantile(x, probs = c(0,.975), na.rm = T)*c(1, 1.2))
-  ylim = c(quantile(y, probs = c(0, 1), na.rm = T))
+  ylim = c(0,1)
   plot(x, y, pch = 16, col = col.transp('blue', .3), 
        xlim = xlim, ylim = ylim, xlab = 'Total CN intensity', 
        ylab = 'Allelic Imbalance 2*|BAF - 0.5|', main = 'TAPS')
   abline(v = 1, lty = 'dotted')
-  points(x[mat$a1<0], y[mat$a1<0], col = col.transp('red', .5))
+  points(x[mat$a1<=0], y[mat$a1<=0], col = col.transp('red', .5))
   tx = ifelse((obj$info$ind[i] + 100) %in% obj$info$ind & obj$i !=54, 'Sample has germline SNP array',
               'Sample does not have germline SNP array')
   mtext(tx)
@@ -70,18 +73,20 @@ readHAPSEG = function(obj, printfolder = NULL){
   names(mat)[6] = 'a1'
   mat$a2 = as.seg.dat$copy_num[(nr/2+1):(nr)]
   mat$W = mat$W*2
+  mat$tot =  mat$a1 + mat$a2
+  mat$imba = 2*(mat$a2/(mat$tot)-.5)
   obj$mat = mat
   obj$seg.dat = seg.dat
   
-  x = mat$a1 + mat$a2
-  y = 2*(mat$a2/(x)-.5)
+  x = mat$tot
+  y = mat$imba
   xlim = c(quantile(x, probs = c(.025,.975), na.rm = T)*c(.8, 1.2))
-  ylim = c(quantile(y, probs = c(0, 1), na.rm = T))
+  ylim = c(0,1)
   plot(x, y, pch = 16, col = col.transp('blue', .3), 
        xlim = xlim, ylim = ylim, xlab = 'Total CN intensity', 
        ylab = 'Allelic Imbalance 2*|BAF - 0.5|', 
        main = paste('HAPSEG',obj$h, sep = ''))
-  points(x[mat$a1<0], y[mat$a1<0], col = col.transp('red', .5))
+  points(x[mat$a1<=0], y[mat$a1<=0], col = col.transp('red', .5))
   title(main = info$sample.name[i], outer = T, line = 0)
   if (!is.null(printfolder)) {  
     dir.create(printfolder, recursive = T, showWarnings = FALSE)
@@ -753,6 +758,7 @@ setCNs = function(obj, linearize = FALSE){
 }
 setMultiplicity = function(obj){
   muts = obj$muts
+  mat = obj$mat
   #Express vaf as number of copies per cell (cellular multiplicity)
   alpha = obj$alpha
   muts$mult = muts$af/alpha*
